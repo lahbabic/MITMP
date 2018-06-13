@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import subprocess, sys
+from optparse import OptionParser
 from scapy.all import *
 
 W = '\033[0m'   # white
@@ -118,18 +119,30 @@ def build_arp_packet( iface, my_ip_mac, neighbors ):
     return 0
 
 
-def main( iface ):
+def main( ):
+
+    option_parser = OptionParser()
+    option_parser.add_option("-i", "--intf", dest="iface",
+                      help="network interface to use")
+
+    (options, args) = option_parser.parse_args()
+    if options.iface is None:
+        print("Missing argument.")
+        print("Please use -h for more information.")
+        print("\t"+sys.argv[0]+ " -h")
+        exit("\n")
+
     neighbor = []
     my_ip_mac = []
     print("\n")
-    my_ip_mac = get_my_ip_mac( iface )
+    my_ip_mac = get_my_ip_mac( options.iface )
     if not my_ip_mac:
         exit(0)
 
     print("My ip is: "+my_ip_mac[0])
     print("My mac address is: "+my_ip_mac[1])
 
-    neighbor = neigh( iface )
+    neighbor = neigh( options.iface )
     if not neighbor:
         print("No neighbor found")
         exit(0)
@@ -137,4 +150,4 @@ def main( iface ):
 
 
 if __name__ == '__main__':
-	main( sys.argv[1] )
+	main( )
