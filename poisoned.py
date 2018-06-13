@@ -146,7 +146,7 @@ def main( ):
     if not neighbor:
         print("No neighbor found")
         exit(0)
-    build_arp_packet( iface, my_ip_mac, neighbor )
+    build_arp_packet( options.iface, my_ip_mac, neighbor )
 
 
 if __name__ == '__main__':
