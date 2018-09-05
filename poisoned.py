@@ -5,6 +5,7 @@ import subprocess, sys
 from optparse import OptionParser
 from scapy.all import *
 
+
 W = '\033[0m'   # white
 R = '\033[31m'  # red
 G = '\033[32m'  # green
