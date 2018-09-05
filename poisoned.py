@@ -3,8 +3,11 @@
 
 import subprocess, sys
 from optparse import OptionParser
-from scapy.all import *
-
+try:
+    from scapy.all import *
+except:
+    print("\nDependency problem, please install scapy.\n")
+    exit(0)
 
 W = '\033[0m'   # white
 R = '\033[31m'  # red
@@ -38,28 +41,6 @@ def parse_arp_entry(entry):
 		return (ip, mac)
 	except:
 		return None
-"""
-def neigh(iface):
-	"Return list of tuples (ipv4, mac@) of neighbors machines in mac table"
-	neighbor = []
-	result = run_command("arp", "-i", iface, "-a")
-	if not result:
-		return None
-
-	res = result.split(b'?')
-	if len(res):
-		res.pop(0)
-
-	try:
-		for r in res:
-			if b"permanent" not in r:
-				neighbor.append( parse_arp_entry(r) )
-		if neighbor:
-			return neighbor
-		else: return None
-	except:
-		return None
-"""
 
 def create_mask_from_cidr_prefix(prefix):
     "Return a network mask from a CIDR prefix"
