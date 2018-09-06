@@ -12,13 +12,16 @@ except:
 W = '\033[0m'   # white
 R = '\033[31m'  # red
 G = '\033[32m'  # green
+O = '\033[93m'  # orange
 
-def print_ok():
-    print(W+"["+G+"ok"+W+"]")
+def print_G(text=""):
+    print(W+"["+G+text+W+"]")
 
-def print_err():
-    print(W+"["+R+"error"+W+"]")
+def print_R(text=""):
+    print(W+"["+R+text+W+"]")
 
+def print_O(text=""):
+    print(W+"["+O+text+W+"]")
 
 def run_command(*args, **kwargs):
 	"Run a command and return stdout or stderr"
@@ -27,20 +30,11 @@ def run_command(*args, **kwargs):
 	try:
 		res = subprocess.check_output(args, stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError:
-		print_err()
+		print_R("ok")
 		return None
-	print_ok()
+	print_G("ok")
 	return res
 
-
-def parse_arp_entry(entry):
-	try:
-		entry = entry.decode("utf-8")
-		ip = (entry.split('('))[1].split(')')[0]
-		mac = (entry.split('at '))[1].split(' on')[0]
-		return (ip, mac)
-	except:
-		return None
 
 def create_mask_from_cidr_prefix(prefix):
     "Return a network mask from a CIDR prefix"
@@ -98,8 +92,10 @@ def is_ipv4(ip):
     return False
 
 def neigh(iface, my_ip):
-    "Return a list of tuples (ipv4, mac@) of neighbor machines"
+    "Return a list of dicts {ipv4, mac@} of neighbor machines"
     neighbor = []
+    adr_obj = {"inet":"",
+               "link/ether":""}
     ip_mask = my_ip.split('/')
     result = run_command("ip", "neigh")
     if not result:
@@ -107,47 +103,41 @@ def neigh(iface, my_ip):
 
     lines = result.split(b'\n')
     # get only "reachable" neighors of the selected interface
-    lines = [line for line in lines if iface in str(line)\
-                                        if "REACHABLE" in str(line)]
-
+    lines = [line.decode("utf-8") for line in lines if iface in str(line)]
     for line in lines:
-        ip = line.split(b' ')[0].decode("utf-8")
+        line = line.split(' ')
+        ip = line[0]
         if is_ipv4(ip):
             if in_same_net(ip_mask[0], ip, int(ip_mask[1])):
-                neighbor.append( ip )
+                adr_obj["inet"] = ip
+                adr_obj["link/ether"] = line[4]
+                neighbor.append(dict(adr_obj))
 
-    print(neighbor)
     return neighbor
-
-def check_for_inet(iter):
-	"Return True if their is an ipv4 address in the iterable"
-	for line in iter:
-		addr_type = line.split(" ")[0]
-		if addr_type == 'inet':
-			return True
-	print("Interface doesn't have an IPv4 assigned")
-	return False
 
 
 def get_my_ip_mac(iface):
     "Return tuple (ipv4, mac@) if exists, None otherwise"
+
+    adr_obj = {"inet":"",
+               "link/ether":""}
     res = run_command("ip", "a", "show", "dev", iface)
     if not res:
         return None
 
-    res = res.decode("utf-8").split('\n\t')
-    if not check_for_inet(res):
-        return None
+    res = res.decode("utf-8").split('\n')
+    for line in res:
+        line = line.strip("  ")
+        tmp = line.split(" ")
+        obj = tmp[0]
+        if obj in adr_obj.keys():
+            adr_obj[ obj ] = tmp[1]
 
-    ip, mac = "", ""
-    for r in res:
-        entry = r.split(" ")
-        if entry[0] == 'inet':
-            ip_mask = entry[1]
-        elif entry[0] == 'ether':
-            mac = entry[1]
+    if adr_obj["inet"] == "":
+        print("Interface doesn't have an IPv4 assigned")
+        exit(0)
 
-    return (ip_mask, mac)
+    return adr_obj
 
 
 def build_arp_packet( iface, my_ip_mac, neighbors ):
@@ -175,8 +165,25 @@ def build_arp_packet( iface, my_ip_mac, neighbors ):
         print("No reply has been received.")"""
     return 0
 
+def i_am_attacked(neighbors):
+    """
+        Return true if their is two machines with the same mac address\
+        in the arp cache
+    """
+    print("Checking if you're having mitm attack ... ", end="")
+    ethers = [ nei["link/ether"]  for nei in neighbors ]
+    if len(ethers) != len( list(set(ethers)) ):
+        return True
+    else:
+        return False
 
-def main( ):
+def who_is_attacking(neighbors):
+    """
+
+    """
+
+
+def main():
 
     option_parser = OptionParser()
     option_parser.add_option("-i", "--intf", dest="iface",
@@ -190,19 +197,32 @@ def main( ):
         exit("\n")
 
     neighbor = []
-    my_ip_mac = []
+    adr_obj = {}
     print("\n")
-    my_ip_mac = get_my_ip_mac( options.iface )
-    if not my_ip_mac:
-        exit(0)
+    adr_obj = get_my_ip_mac( options.iface )
 
-    print("My ip is: "+my_ip_mac[0])
-    print("My mac address is: "+my_ip_mac[1])
 
-    neighbor = neigh( options.iface, my_ip_mac[0] )
-    if not neighbor:
+    print("Your ip address is: "+ adr_obj["inet"])
+    print("Your mac address is: "+ adr_obj["link/ether"])
+    print("\n")
+
+    neighbors = neigh( options.iface, adr_obj["inet"] )
+    if neighbors:
+        print(str(len(neighbors)) + " neighbors found: ", end="\n\t")
+        for n in neighbors:
+            print(n["inet"], end="  ")
+        print("\n")
+    else:
         print("No neighbor found")
         exit(0)
+
+    if i_am_attacked(neighbors):
+        print_O("probably")
+        print("Identifying the attacker ... ", end="")
+    else:
+        print_G("fine")
+
+
     #build_arp_packet( options.iface, my_ip_mac, neighbor )
 
 
