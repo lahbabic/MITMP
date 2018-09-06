@@ -30,7 +30,7 @@ def run_command(*args, **kwargs):
 	try:
 		res = subprocess.check_output(args, stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError:
-		print_R("ok")
+		print_R("error")
 		return None
 	print_G("ok")
 	return res
@@ -125,13 +125,17 @@ def get_my_ip_mac(iface):
     if not res:
         return None
 
-    res = res.decode("utf-8").split('\n')
-    for line in res:
-        line = line.strip("  ")
-        tmp = line.split(" ")
-        obj = tmp[0]
-        if obj in adr_obj.keys():
-            adr_obj[ obj ] = tmp[1]
+    try:
+        res = res.decode("utf-8").split('\n')
+        for line in res:
+            line = line.strip("  ")
+            tmp = line.split(" ")
+            obj = tmp[0]
+            if obj in adr_obj.keys():
+                adr_obj[ obj ] = tmp[1]
+    except:
+        print("Error while parsing output ... ")
+        print_R("error")
 
     if adr_obj["inet"] == "":
         print("Interface doesn't have an IPv4 assigned")
