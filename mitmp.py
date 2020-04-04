@@ -6,7 +6,7 @@ from optparse import OptionParser
 try:
     from scapy.all import *
 except:
-    print("\nDependency problem, please install scapy.\n")
+    print("\nDependency problem, please install scapy!\n")
     exit(0)
 
 W = '\033[0m'   # white
