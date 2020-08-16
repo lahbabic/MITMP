@@ -97,7 +97,12 @@ def neigh(iface, my_ip):
     adr_obj = {"inet":"",
                "link/ether":""}
     ip_mask = my_ip.split('/')
-    result = run_command("ip", "neigh")
+    try:
+        result = run_command("ip", "neigh")
+    except FileNotFoundError:
+        print("\nDependency problem, please install ip command!\n")
+        exit(0)
+
     if not result:
         return None
 
@@ -121,7 +126,11 @@ def get_my_ip_mac(iface):
 
     adr_obj = {"inet":"",
                "link/ether":""}
-    res = run_command("ip", "a", "show", "dev", iface)
+    try:
+        res = run_command("ip", "a", "show", "dev", iface)
+    except FileNotFoundError:
+        print("\nDependency problem, please install ip command!\n")
+        exit(0)
     if not res:
         return None
 
